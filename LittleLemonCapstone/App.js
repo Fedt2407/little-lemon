@@ -1,20 +1,49 @@
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Onboarding from './screens/Onboarding';
+import HomeScreen from './screens/HomeScreen';
+import ProfileScreen from './screens/ProfileScreen';
+import SplashScreen from './screens/SplashScreen';
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
+  const [state, setState] = useState({
+    isLoading: true,
+    isOnboardingCompleted: true,
+  });
+
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      const result = await AsyncStorage.getItem('isOnboardingCompleted');
+      setState({
+        isLoading: false,
+        isOnboardingCompleted: JSON.parse(result) || false,
+      });
+    };
+
+    checkOnboarding();
+  }, []);
+
+  if (state.isLoading) {
+    return <SplashScreen />;
+  }
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
+    <NavigationContainer>
       <StatusBar style="auto" />
-    </View>
+      <Stack.Navigator>
+        {state.isOnboardingCompleted ? (
+          <Stack.Screen name="Profile" component={ProfileScreen} options={{headerShown: false}} />
+        ) : (
+          <Stack.Screen name="Onboarding" component={Onboarding} options={{headerShown: false}}/>
+        )}
+        <Stack.Screen name="Home" component={HomeScreen} options={{headerShown: false}} />
+        <Stack.Screen name="Profile" component={ProfileScreen} options={{headerShown: false}} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
