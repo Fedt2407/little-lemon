@@ -1,19 +1,108 @@
-import { View, Text, StyleSheet, Image, SafeAreaView, TextInput, ScrollView, ImageBackground } from 'react-native'
-import React, { useState } from 'react'
+import { View, Text, StyleSheet, Image, SafeAreaView, TextInput, ScrollView } from 'react-native'
+import React, { useState, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Icon, CheckBox } from 'react-native-elements';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
+import * as MediaLibrary from 'expo-media-library';
 import Button from '../components/Button';
 
 const ProfileScreen = () => {
     const navigation = useNavigation();
 
-    const [selected, setSelected] = useState([false, false, false, false]);
+    const [name, setName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
+    const [isOnboardingCompleted, setIsOnboardingCompleted] = useState(false);
 
+    useFocusEffect(
+        useCallback(() => {
+            const getData = async () => {
+                try {
+                    const savedName = await AsyncStorage.getItem('name');
+                    const savedEmail = await AsyncStorage.getItem('email');
+                    const savedIsOnboardingCompleted = await AsyncStorage.getItem('isOnboardingCompleted');
+                    if (name !== null && email !== null) {
+                        setName(savedName);
+                        setEmail(savedEmail);
+                        setIsOnboardingCompleted(JSON.parse(savedIsOnboardingCompleted));
+                    }
+                } catch (e) {
+                    console.log('Failed to fetch name and email')
+                }
+            }
+            getData();
+        }, [])
+    );
+
+
+    const [selected, setSelected] = useState([false, false, false, false]);
     const handlePress = index => {
         const newSelected = [...selected];
         newSelected[index] = !newSelected[index];
         setSelected(newSelected);
     };
+
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [isValid, setIsValid] = useState(false);
+    const checkPhoneNumber = (value) => {
+        setPhoneNumber(value);
+        const syntax = /^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/;
+        if (syntax.test(value)) {
+            setIsValid(true);
+        } else {
+            return false;
+        }
+    }
+
+    // this block allows to select a photo from phone gallery
+    const [status, requestPermission] = MediaLibrary.usePermissions();
+    const [profileImage, setProfileImage] = useState(require('../assets/profile-image.png'));
+
+    if (status === null) {
+        requestPermission();
+    }
+
+    const pickImageAsync = async () => {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            allowsEditing: true,
+            quality: 1,
+        });
+        if (!result.canceled) {
+            setProfileImage({ uri: result.assets[0].uri });
+        } else {
+            alert('You did not select any image.');
+        }
+    };
+
+    const saveData = async () => {
+        try {
+            await AsyncStorage.setItem('profileImage', profileImage.uri);
+            await AsyncStorage.setItem('lastName', lastName);
+            await AsyncStorage.setItem('phoneNumber', phoneNumber);
+            await AsyncStorage.setItem('orderStatuses', selected[0].toString());
+            await AsyncStorage.setItem('passwordChanges', selected[1].toString());
+            await AsyncStorage.setItem('specialOffers', selected[2].toString());
+            await AsyncStorage.setItem('newsletter', selected[3].toString());
+            console.log('Data saved')
+        } catch (e) {
+            console.log('Failed to save name and email')
+        }
+    };
+
+    const logout = async () => {
+        try {
+            await AsyncStorage.removeItem('name');
+            await AsyncStorage.removeItem('email');
+            await AsyncStorage.setItem('isOnboardingCompleted', JSON.stringify(false));
+            navigation.navigate('Onboarding');
+            console.log('Data removed')
+        } catch (e) {
+            console.log('Failed to remove data')
+        }
+    };
+
 
     return (
         <View style={styles.continer}>
@@ -24,14 +113,17 @@ const ProfileScreen = () => {
                         type='ionicon'
                         size={60}
                         color='#495E57'
-                        onPress={() => navigation.navigate('Home')}
+                        onPress={() => {
+                            navigation.navigate('Onboarding')
+
+                        }}
                     />
                     <Image
                         source={require('../assets/Logo.png')}
                         style={styles.logo}
                     />
                     <Image
-                        source={require('../assets/Profile.png')}
+                        source={profileImage}
                         style={styles.profileIcon}
                     />
                 </View>
@@ -41,12 +133,12 @@ const ProfileScreen = () => {
                         <Text style={styles.textSubTitle}>Avatar</Text>
                         <View style={styles.profileContainer}>
                             <Image
-                                source={require('../assets/Profile.png')}
+                                source={profileImage}
                                 style={styles.profile}
                             />
                             <Button
                                 description="Change"
-                                onPress={() => navigation.navigate('Profile')}
+                                onPress={pickImageAsync}
                                 width={'auto'}
                                 backgroundColor="#495E57"
                                 borderColor="#495E57"
@@ -54,7 +146,7 @@ const ProfileScreen = () => {
                             />
                             <Button
                                 description="Remove"
-                                onPress={() => navigation.navigate('Profile')}
+                                onPress={() => setProfileImage(require('../assets/profile-image.png'))}
                                 width={'auto'}
                                 backgroundColor="#FFFFFF"
                                 borderColor="#495E57"
@@ -64,40 +156,43 @@ const ProfileScreen = () => {
                         <Text style={styles.textSubTitle}>First name</Text>
                         <TextInput
                             style={styles.textInput}
-                            placeholder="Enter your name"
+                            value={name}
                         />
                         <Text style={styles.textSubTitle}>Last name</Text>
                         <TextInput
                             style={styles.textInput}
-                            placeholder="Enter your email"
+                            value={lastName}
+                            onChangeText={(text) => setLastName(text)}
                         />
                         <Text style={styles.textSubTitle}>Email</Text>
                         <TextInput
                             style={styles.textInput}
-                            placeholder="Enter your name"
+                            value={email}
                         />
-                            <Text style={styles.textSubTitle}>Phone number</Text>
-                            <TextInput
-                                style={styles.textInput}
-                                placeholder="Enter your email"
-                            />
-                            <Text style={[styles.textTitle, { marginVertical: '5%' }]}>Email notification</Text>
-                            <View style={{ marginBottom: '8%' }}>
-                                {['Order statuses', 'Password changes', 'Special offers', 'Newsletter'].map((checkbox, index) => (
-                                    <CheckBox
-                                        key={index}
-                                        title={checkbox}
-                                        checked={selected[index]}
-                                        onPress={() => handlePress(index)}
-                                        containerStyle={styles.checkbox}
-                                        checkedColor='#495E57'
-                                        textStyle={{ fontWeight: 500 }}
-                                    />
-                                ))}
-                            </View>
+                        <Text style={styles.textSubTitle}>Phone number</Text>
+                        <TextInput
+                            style={styles.textInput}
+                            value={phoneNumber}
+                            onChangeText={(text) => setLastName(text)}
+                        />
+
+                        <Text style={[styles.textTitle, { marginVertical: '5%' }]}>Email notification</Text>
+                        <View style={{ marginBottom: '8%' }}>
+                            {['Order statuses', 'Password changes', 'Special offers', 'Newsletter'].map((checkbox, index) => (
+                                <CheckBox
+                                    key={index}
+                                    title={checkbox}
+                                    checked={selected[index]}
+                                    onPress={() => handlePress(index)}
+                                    containerStyle={styles.checkbox}
+                                    checkedColor='#495E57'
+                                    textStyle={{ fontWeight: 500 }}
+                                />
+                            ))}
+                        </View>
                         <Button
                             description="Log out"
-                            onPress={() => navigation.navigate('Profile')}
+                            onPress={logout}
                             width={'100%'}
                             backgroundColor="#F4CE14"
                             borderColor="#EE9972"
@@ -114,7 +209,7 @@ const ProfileScreen = () => {
                             />
                             <Button
                                 description="Save changes"
-                                onPress={() => navigation.navigate('Profile')}
+                                onPress={saveData}
                                 width={'auto'}
                                 backgroundColor="#495E57"
                                 borderColor="#495E57"

@@ -11,24 +11,20 @@ import SplashScreen from './screens/SplashScreen';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
-  const [state, setState] = useState({
-    isLoading: true,
-    isOnboardingCompleted: true,
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isOnboardingCompleted, setIsOnboardingCompleted] = useState(false);
 
   useEffect(() => {
     const checkOnboarding = async () => {
       const result = await AsyncStorage.getItem('isOnboardingCompleted');
-      setState({
-        isLoading: false,
-        isOnboardingCompleted: JSON.parse(result) || false,
-      });
+      setIsLoading(false);
+      setIsOnboardingCompleted(JSON.parse(result));
+      console.log('isOnboardingCompleted:', result);
     };
-
     checkOnboarding();
   }, []);
 
-  if (state.isLoading) {
+  if (isLoading) {
     return <SplashScreen />;
   }
 
@@ -36,14 +32,17 @@ export default function App() {
     <NavigationContainer>
       <StatusBar style="auto" />
       <Stack.Navigator>
-        {state.isOnboardingCompleted ? (
-          <Stack.Screen name="Profile" component={ProfileScreen} options={{headerShown: false}} />
+        {isOnboardingCompleted ? (
+          <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
         ) : (
-          <Stack.Screen name="Onboarding" component={Onboarding} options={{headerShown: false}}/>
+          <Stack.Screen name="Onboarding" component={Onboarding} options={{ headerShown: false }} />
         )}
-        <Stack.Screen name="Home" component={HomeScreen} options={{headerShown: false}} />
-        <Stack.Screen name="Profile" component={ProfileScreen} options={{headerShown: false}} />
+        <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
+
+/*
+
+*/

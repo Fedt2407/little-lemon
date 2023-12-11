@@ -1,10 +1,68 @@
-import { View, Text, StyleSheet, Image, SafeAreaView, TextInput } from 'react-native';
-import React from 'react';
+import { View, Text, StyleSheet, Image, SafeAreaView, TextInput, Alert } from 'react-native';
+import React, { useState, useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Button from '../components/Button';
 
 const Onboarding = () => {
     const navigation = useNavigation();
+
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [isOnboardingCompleted, setIsOnboardingCompleted] = useState(false);
+
+    const saveData = async () => {
+        try {
+            await AsyncStorage.setItem('name', name);
+            await AsyncStorage.setItem('email', email);
+            await AsyncStorage.setItem('isOnboardingCompleted', JSON.stringify(true));
+            navigation.navigate('Profile');
+        } catch (error) {
+            console.error('Errore nel salvataggio dei dati:', error);
+        }
+    };
+
+    const onboardingCompleted = () => {
+        if (name === '' || email === '') {
+            Alert.alert(
+                'Error',
+                'Please fill in all fields',
+                [
+                    { text: 'OK' }
+                ],
+                { cancelable: false }
+            )
+        } else {
+            saveData();
+            setIsOnboardingCompleted(true);
+            navigation.navigate('Profile');
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            const getData = async () => {
+                try {
+                    const savedName = await AsyncStorage.getItem('name');
+                    const savedEmail = await AsyncStorage.getItem('email');
+                    const savedIsOnboardingCompleted = await AsyncStorage.getItem('isOnboardingCompleted');
+                    if (savedName !== null && savedEmail !== null) {
+                        setName(savedName);
+                        setEmail(savedEmail);
+                        setIsOnboardingCompleted(JSON.parse(savedIsOnboardingCompleted));
+                    } else {
+                        setName('');
+                        setEmail('');
+                        setIsOnboardingCompleted(false);
+                    }
+                } catch (error) {
+                    console.log(error, 'error');
+                }
+            }
+            getData();
+        }, [])
+    );
 
     return (
         <View style={styles.continer}>
@@ -21,17 +79,21 @@ const Onboarding = () => {
                     <TextInput
                         style={styles.textInput}
                         placeholder="Enter your name"
+                        value={name}
+                        onChangeText={(text) => setName(text)}
                     />
                     <Text style={styles.mainText}>Email</Text>
                     <TextInput
                         style={styles.textInput}
                         placeholder="Enter your email"
+                        value={email}
+                        onChangeText={(text) => setEmail(text)}
                     />
                 </View>
                 <View style={styles.buttonContainer}>
                     <Button
                         description="Next"
-                        onPress={() => navigation.navigate('Profile')}
+                        onPress={onboardingCompleted}
                         width={'40%'}
                         backgroundColor="#dedede"
                         borderColor="#dedede"
@@ -63,7 +125,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#dedede',
-        paddingVertical: '10%'
+        paddingVertical: '10%',
     },
     onboarding: {
         fontSize: 30,
@@ -78,7 +140,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     textInput: {
-        fontSize: 30,
+        fontSize: 24,
         padding: 10,
         width: '80%',
         alignSelf: 'center',
