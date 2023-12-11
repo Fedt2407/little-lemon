@@ -1,13 +1,10 @@
 import { View, Text, StyleSheet, Image, SafeAreaView, TextInput, Alert } from 'react-native';
 import React, { useState, useCallback } from 'react';
-import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Button from '../components/Button';
 
-const Onboarding = () => {
-    const navigation = useNavigation();
-
+const Onboarding = ({updateOnboardingStatus}) => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [isOnboardingCompleted, setIsOnboardingCompleted] = useState(false);
@@ -16,8 +13,7 @@ const Onboarding = () => {
         try {
             await AsyncStorage.setItem('name', name);
             await AsyncStorage.setItem('email', email);
-            await AsyncStorage.setItem('isOnboardingCompleted', JSON.stringify(true));
-            navigation.navigate('Profile');
+            updateOnboardingStatus(true);
         } catch (error) {
             console.error('Errore nel salvataggio dei dati:', error);
         }
@@ -36,7 +32,6 @@ const Onboarding = () => {
         } else {
             saveData();
             setIsOnboardingCompleted(true);
-            navigation.navigate('Profile');
         }
     };
 

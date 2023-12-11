@@ -24,28 +24,36 @@ export default function App() {
     checkOnboarding();
   }, []);
 
+  const updateOnboardingStatus = async (value) => {
+    setIsOnboardingCompleted(value);
+    await AsyncStorage.setItem('isOnboardingCompleted', JSON.stringify(value));
+  };
+
   if (isLoading) {
-    return <SplashScreen />;
+    return <SplashScreen />
   }
 
   return (
     <NavigationContainer>
       <StatusBar style="auto" />
       <Stack.Navigator>
-        <Stack.Screen name="Onboarding" component={Onboarding} options={{ headerShown: false }} />
-        <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+        {isOnboardingCompleted ? (
+          <Stack.Screen
+            name="Profile"
+            options={{ headerShown: false }}
+          >
+            {props => <ProfileScreen {...props} updateOnboardingStatus={updateOnboardingStatus} />}
+          </Stack.Screen>
+
+        ) : (
+          <Stack.Screen
+            name="Onboarding"
+            options={{ headerShown: false }}
+          >
+            {props => <Onboarding {...props} updateOnboardingStatus={updateOnboardingStatus} />}
+          </Stack.Screen>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
-  );
+  )
 }
-
-/*
-
-{isOnboardingCompleted ? (
-          <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
-        ) : (
-          <Stack.Screen name="Onboarding" component={Onboarding} options={{ headerShown: false }} />
-        )}
-
-*/

@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import Button from '../components/Button';
 
-const ProfileScreen = () => {
+const ProfileScreen = ({updateOnboardingStatus}) => {
     const navigation = useNavigation();
 
     const [name, setName] = useState('');
@@ -29,7 +29,6 @@ const ProfileScreen = () => {
                     const savedPasswordChanges = await AsyncStorage.getItem('passwordChanges');
                     const savedSpecialOffers = await AsyncStorage.getItem('specialOffers');
                     const savedNewsletter = await AsyncStorage.getItem('newsletter');
-                    const savedIsOnboardingCompleted = await AsyncStorage.getItem('isOnboardingCompleted');
                     if (savedName !== null && savedEmail !== null) {
                         setProfileImage({ uri: savedImage });
                         setName(savedName);
@@ -42,7 +41,6 @@ const ProfileScreen = () => {
                             JSON.parse(savedSpecialOffers),
                             JSON.parse(savedNewsletter),
                         ]);
-                        setIsOnboardingCompleted(JSON.parse(savedIsOnboardingCompleted));
                     }
                 } catch (e) {
                     console.log('Failed to fetch the data')
@@ -60,15 +58,11 @@ const ProfileScreen = () => {
     };
 
     const [phoneNumber, setPhoneNumber] = useState('');
-    const [isValid, setIsValid] = useState(false);
+    const [isValid, setIsValid] = useState(null);
     const checkPhoneNumber = (value) => {
         setPhoneNumber(value);
-        const syntax = /^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/;
-        if (syntax.test(value)) {
-            setIsValid(true);
-        } else {
-            return false;
-        }
+        const syntax = /^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/.test(value);
+        setIsValid(syntax);
     };
 
     // this block allows to select a photo from phone gallery
@@ -117,7 +111,7 @@ const ProfileScreen = () => {
             await AsyncStorage.removeItem('passwordChanges');
             await AsyncStorage.removeItem('specialOffers');
             await AsyncStorage.removeItem('newsletter');
-            await AsyncStorage.setItem('isOnboardingCompleted', JSON.stringify(false));
+            updateOnboardingStatus(false);
             navigation.navigate('Onboarding');
             console.log('Data removed')
         } catch (e) {
@@ -193,7 +187,7 @@ const ProfileScreen = () => {
                         />
                         <Text style={styles.textSubTitle}>Phone number</Text>
                         <TextInput
-                            style={isValid ? styles.textInput : [styles.textInput, { borderColor: 'red' }]}
+                            style={isValid === true || isValid === null ? styles.textInput : [styles.textInput, { borderColor: 'red' }]}
                             value={phoneNumber}
                             onChangeText={checkPhoneNumber}
                         />
