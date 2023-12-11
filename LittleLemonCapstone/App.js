@@ -32,11 +32,8 @@ export default function App() {
     <NavigationContainer>
       <StatusBar style="auto" />
       <Stack.Navigator>
-        {isOnboardingCompleted ? (
-          <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
-        ) : (
-          <Stack.Screen name="Onboarding" component={Onboarding} options={{ headerShown: false }} />
-        )}
+        <Stack.Screen name="Onboarding" component={Onboarding} options={{ headerShown: false }} />
+        <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
@@ -44,5 +41,11 @@ export default function App() {
 }
 
 /*
+
+{isOnboardingCompleted ? (
+          <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
+        ) : (
+          <Stack.Screen name="Onboarding" component={Onboarding} options={{ headerShown: false }} />
+        )}
 
 */

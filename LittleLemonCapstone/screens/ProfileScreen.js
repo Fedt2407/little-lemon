@@ -20,22 +20,37 @@ const ProfileScreen = () => {
         useCallback(() => {
             const getData = async () => {
                 try {
+                    const savedImage = await AsyncStorage.getItem('profileImage');
                     const savedName = await AsyncStorage.getItem('name');
+                    const savedLastName = await AsyncStorage.getItem('lastName');
                     const savedEmail = await AsyncStorage.getItem('email');
+                    const savedPhoneNumber = await AsyncStorage.getItem('phoneNumber');
+                    const savedOrderStatuses = await AsyncStorage.getItem('orderStatuses');
+                    const savedPasswordChanges = await AsyncStorage.getItem('passwordChanges');
+                    const savedSpecialOffers = await AsyncStorage.getItem('specialOffers');
+                    const savedNewsletter = await AsyncStorage.getItem('newsletter');
                     const savedIsOnboardingCompleted = await AsyncStorage.getItem('isOnboardingCompleted');
-                    if (name !== null && email !== null) {
+                    if (savedName !== null && savedEmail !== null) {
+                        setProfileImage({ uri: savedImage });
                         setName(savedName);
+                        setLastName(savedLastName);
                         setEmail(savedEmail);
+                        setPhoneNumber(savedPhoneNumber);
+                        setSelected([
+                            JSON.parse(savedOrderStatuses),
+                            JSON.parse(savedPasswordChanges),
+                            JSON.parse(savedSpecialOffers),
+                            JSON.parse(savedNewsletter),
+                        ]);
                         setIsOnboardingCompleted(JSON.parse(savedIsOnboardingCompleted));
                     }
                 } catch (e) {
-                    console.log('Failed to fetch name and email')
+                    console.log('Failed to fetch the data')
                 }
             }
             getData();
         }, [])
     );
-
 
     const [selected, setSelected] = useState([false, false, false, false]);
     const handlePress = index => {
@@ -54,7 +69,7 @@ const ProfileScreen = () => {
         } else {
             return false;
         }
-    }
+    };
 
     // this block allows to select a photo from phone gallery
     const [status, requestPermission] = MediaLibrary.usePermissions();
@@ -87,14 +102,21 @@ const ProfileScreen = () => {
             await AsyncStorage.setItem('newsletter', selected[3].toString());
             console.log('Data saved')
         } catch (e) {
-            console.log('Failed to save name and email')
+            console.log('Failed to save data')
         }
     };
 
     const logout = async () => {
         try {
+            await AsyncStorage.removeItem('profileImage');
             await AsyncStorage.removeItem('name');
+            await AsyncStorage.removeItem('lastName');
             await AsyncStorage.removeItem('email');
+            await AsyncStorage.removeItem('phoneNumber');
+            await AsyncStorage.removeItem('orderStatuses');
+            await AsyncStorage.removeItem('passwordChanges');
+            await AsyncStorage.removeItem('specialOffers');
+            await AsyncStorage.removeItem('newsletter');
             await AsyncStorage.setItem('isOnboardingCompleted', JSON.stringify(false));
             navigation.navigate('Onboarding');
             console.log('Data removed')
@@ -171,9 +193,9 @@ const ProfileScreen = () => {
                         />
                         <Text style={styles.textSubTitle}>Phone number</Text>
                         <TextInput
-                            style={styles.textInput}
+                            style={isValid ? styles.textInput : [styles.textInput, { borderColor: 'red' }]}
                             value={phoneNumber}
-                            onChangeText={(text) => setLastName(text)}
+                            onChangeText={checkPhoneNumber}
                         />
 
                         <Text style={[styles.textTitle, { marginVertical: '5%' }]}>Email notification</Text>
@@ -201,7 +223,6 @@ const ProfileScreen = () => {
                         <View style={styles.buttonContainer}>
                             <Button
                                 description="Discard changes"
-                                onPress={() => navigation.navigate('Profile')}
                                 width={'auto'}
                                 backgroundColor="#FFFFFF"
                                 borderColor="#495E57"
