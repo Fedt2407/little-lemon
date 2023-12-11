@@ -7,7 +7,6 @@ import Button from '../components/Button';
 const Onboarding = ({updateOnboardingStatus}) => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
-    const [isOnboardingCompleted, setIsOnboardingCompleted] = useState(false);
 
     const saveData = async () => {
         try {
@@ -31,7 +30,6 @@ const Onboarding = ({updateOnboardingStatus}) => {
             )
         } else {
             saveData();
-            setIsOnboardingCompleted(true);
         }
     };
 
@@ -41,15 +39,12 @@ const Onboarding = ({updateOnboardingStatus}) => {
                 try {
                     const savedName = await AsyncStorage.getItem('name');
                     const savedEmail = await AsyncStorage.getItem('email');
-                    const savedIsOnboardingCompleted = await AsyncStorage.getItem('isOnboardingCompleted');
                     if (savedName !== null && savedEmail !== null) {
                         setName(savedName);
                         setEmail(savedEmail);
-                        setIsOnboardingCompleted(JSON.parse(savedIsOnboardingCompleted));
                     } else {
                         setName('');
                         setEmail('');
-                        setIsOnboardingCompleted(false);
                     }
                 } catch (error) {
                     console.log(error, 'error');

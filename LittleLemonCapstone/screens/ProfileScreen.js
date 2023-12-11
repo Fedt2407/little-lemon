@@ -2,19 +2,15 @@ import { View, Text, StyleSheet, Image, SafeAreaView, TextInput, ScrollView } fr
 import React, { useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Icon, CheckBox } from 'react-native-elements';
-import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import Button from '../components/Button';
 
 const ProfileScreen = ({updateOnboardingStatus}) => {
-    const navigation = useNavigation();
-
     const [name, setName] = useState('');
     const [lastName, setLastName] = useState('');
-    const [email, setEmail] = useState('');
-    const [isOnboardingCompleted, setIsOnboardingCompleted] = useState(false);
+    const [email, setEmail] = useState('');;
 
     useFocusEffect(
         useCallback(() => {
@@ -112,7 +108,6 @@ const ProfileScreen = ({updateOnboardingStatus}) => {
             await AsyncStorage.removeItem('specialOffers');
             await AsyncStorage.removeItem('newsletter');
             updateOnboardingStatus(false);
-            navigation.navigate('Onboarding');
             console.log('Data removed')
         } catch (e) {
             console.log('Failed to remove data')
@@ -129,10 +124,6 @@ const ProfileScreen = ({updateOnboardingStatus}) => {
                         type='ionicon'
                         size={60}
                         color='#495E57'
-                        onPress={() => {
-                            navigation.navigate('Onboarding')
-
-                        }}
                     />
                     <Image
                         source={require('../assets/Logo.png')}
