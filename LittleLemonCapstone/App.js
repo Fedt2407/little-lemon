@@ -38,13 +38,20 @@ export default function App() {
       <StatusBar style="auto" />
       <Stack.Navigator>
         {isOnboardingCompleted ? (
-          <Stack.Screen
-            name="Profile"
-            options={{ headerShown: false }}
-          >
-            {props => <ProfileScreen {...props} updateOnboardingStatus={updateOnboardingStatus} />}
-          </Stack.Screen>
-
+          <>
+            <Stack.Screen
+              name="Home"
+              options={{ headerShown: false }}
+            >
+              {props => <HomeScreen {...props} updateOnboardingStatus={updateOnboardingStatus} />}
+            </Stack.Screen>
+            <Stack.Screen
+              name="Profile"
+              options={{ headerShown: false }}
+            >
+              {props => <ProfileScreen {...props} updateOnboardingStatus={updateOnboardingStatus} />}
+            </Stack.Screen>
+          </>
         ) : (
           <Stack.Screen
             name="Onboarding"
