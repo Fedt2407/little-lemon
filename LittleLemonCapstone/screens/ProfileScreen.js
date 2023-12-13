@@ -3,11 +3,14 @@ import React, { useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Icon, CheckBox } from 'react-native-elements';
 import { useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import Button from '../components/Button';
 
 const ProfileScreen = ({updateOnboardingStatus}) => {
+    const navigation = useNavigation();
+    
     const [name, setName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');;
@@ -47,7 +50,7 @@ const ProfileScreen = ({updateOnboardingStatus}) => {
     );
 
     const [selected, setSelected] = useState([false, false, false, false]);
-    const handlePress = index => {
+    const handleCheck = index => {
         const newSelected = [...selected];
         newSelected[index] = !newSelected[index];
         setSelected(newSelected);
@@ -124,6 +127,7 @@ const ProfileScreen = ({updateOnboardingStatus}) => {
                         type='ionicon'
                         size={60}
                         color='#495E57'
+                        onPress={() => navigation.navigate('Home')}
                     />
                     <Image
                         source={require('../assets/Logo.png')}
@@ -190,7 +194,7 @@ const ProfileScreen = ({updateOnboardingStatus}) => {
                                     key={index}
                                     title={checkbox}
                                     checked={selected[index]}
-                                    onPress={() => handlePress(index)}
+                                    onPress={() => handleCheck(index)}
                                     containerStyle={styles.checkbox}
                                     checkedColor='#495E57'
                                     textStyle={{ fontWeight: 500 }}

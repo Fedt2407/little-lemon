@@ -1,172 +1,223 @@
-import { View, Text, StyleSheet, Image, SafeAreaView, ScrollView } from 'react-native'
-import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Image, Pressable, SafeAreaView, FlatList, Alert } from 'react-native'
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Icon, CheckBox } from 'react-native-elements';
 import { useFocusEffect } from '@react-navigation/native';
-import * as ImagePicker from 'expo-image-picker';
-import * as MediaLibrary from 'expo-media-library';
+import { useNavigation } from '@react-navigation/native';
+import {
+    createTable,
+    getMenuItems,
+    saveMenuItems,
+    filterByQueryAndCategories,
+} from '../database';
+import { Searchbar } from 'react-native-paper';
+import debounce from 'lodash.debounce';
+import Filters from '../components/Filters';
+import { getSectionListData, useUpdateEffect } from '../utils';
 
-const HomeScreen = ({ updateOnboardingStatus }) => {
-    const [name, setName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [email, setEmail] = useState('');;
+const HomeScreen = () => {
+    const navigation = useNavigation();
+    const [profileImage, setProfileImage] = useState(require('../assets/profile-image.png'));
+    const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const [searchBarText, setSearchBarText] = useState('');
+    const [query, setQuery] = useState('');
+    const sections = ['Starters', 'Mains', 'Desserts', 'Drinks', 'Sides', 'Specials'];
+    const [filterSelections, setFilterSelections] = useState(
+        sections.map(() => false)
+    );
+
+    // DONE BECAUSE THE LINK PROVIDED DON'T FETCH ALL THE PICTURES (Grilled Fish and Lemon Dessert are missing)
+    const images = {
+        'greekSalad.jpg': require('../assets/greekSalad.jpg'),
+        'bruschetta.jpg': require('../assets/bruschetta.jpg'),
+        'grilledFish.jpg': require('../assets/grilledFish.jpg'),
+        'pasta.jpg': require('../assets/pasta.jpg'),
+        'lemonDessert.jpg': require('../assets/lemonDessert.jpg'),
+    };
 
     useFocusEffect(
         useCallback(() => {
             const getData = async () => {
                 try {
                     const savedImage = await AsyncStorage.getItem('profileImage');
-                    const savedName = await AsyncStorage.getItem('name');
-                    const savedLastName = await AsyncStorage.getItem('lastName');
-                    const savedEmail = await AsyncStorage.getItem('email');
-                    const savedPhoneNumber = await AsyncStorage.getItem('phoneNumber');
-                    const savedOrderStatuses = await AsyncStorage.getItem('orderStatuses');
-                    const savedPasswordChanges = await AsyncStorage.getItem('passwordChanges');
-                    const savedSpecialOffers = await AsyncStorage.getItem('specialOffers');
-                    const savedNewsletter = await AsyncStorage.getItem('newsletter');
-                    if (savedName !== null && savedEmail !== null) {
+                    if (savedImage !== null) {
                         setProfileImage({ uri: savedImage });
-                        setName(savedName);
-                        setLastName(savedLastName);
-                        setEmail(savedEmail);
-                        setPhoneNumber(savedPhoneNumber);
-                        setSelected([
-                            JSON.parse(savedOrderStatuses),
-                            JSON.parse(savedPasswordChanges),
-                            JSON.parse(savedSpecialOffers),
-                            JSON.parse(savedNewsletter),
-                        ]);
                     }
                 } catch (e) {
                     console.log('Failed to fetch the data')
                 }
             }
             getData();
+            getMenu();
         }, [])
     );
 
-    const [selected, setSelected] = useState([false, false, false, false]);
-    const handlePress = index => {
-        const newSelected = [...selected];
-        newSelected[index] = !newSelected[index];
-        setSelected(newSelected);
-    };
+    // useEffect(() => {
+    //     (async () => {
+    //       try {
+    //         // 1. Create table if it does not exist
+    //         await createTable();
+    //         // 2. Check if data was already stored
+    //         let menuItems = await getMenuItems();
 
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [isValid, setIsValid] = useState(null);
-    const checkPhoneNumber = (value) => {
-        setPhoneNumber(value);
-        const syntax = /^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/.test(value);
-        setIsValid(syntax);
-    };
+    //         if (!menuItems.length) {
+    //           // Fetching menu from URL
+    //           const response = await fetch(API_URL);
+    //           const json = await response.json();
+    //           menuItems = json.menu.map((item) => ({
+    //             ...item,
+    //             category: item.category.title,
+    //           }));
+    //           // Storing into database
+    //           saveMenuItems(menuItems);
+    //         }
 
-    // this block allows to select a photo from phone gallery
-    const [status, requestPermission] = MediaLibrary.usePermissions();
-    const [profileImage, setProfileImage] = useState(require('../assets/profile-image.png'));
+    //         const sectionListData = getSectionListData(menuItems);
+    //         setData(sectionListData);
+    //       } catch (e) {
+    //         // Handle error
+    //         Alert.alert(e.message);
+    //       }
+    //     })();
+    //   }, []);
 
-    if (status === null) {
-        requestPermission();
+    const getMenu = async () => {
+        try {
+            const response = await fetch('https://raw.githubusercontent.com/Meta-Mobile-Developer-PC/Working-With-Data-API/main/capstone.json')
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const json = await response.json()
+            setData(json.menu)
+        } catch (error) {
+            console.error(error)
+        }
+        finally {
+            setLoading(false)
+        }
     }
 
-    const pickImageAsync = async () => {
-        let result = await ImagePicker.launchImageLibraryAsync({
-            allowsEditing: true,
-            quality: 1,
-        });
-        if (!result.canceled) {
-            setProfileImage({ uri: result.assets[0].uri });
-        } else {
-            alert('You did not select any image.');
-        }
+    useUpdateEffect(() => {
+        (async () => {
+            const activeCategories = sections.filter((s, i) => {
+                // If all filters are deselected, all categories are active
+                if (filterSelections.every((item) => item === false)) {
+                    return true;
+                }
+                return filterSelections[i];
+            });
+            try {
+                const menuItems = await filterByQueryAndCategories(
+                    query,
+                    activeCategories
+                );
+                const sectionListData = getSectionListData(menuItems);
+                setData(sectionListData);
+            } catch (e) {
+                Alert.alert(e.message);
+            }
+        })();
+    }, [filterSelections, query]);
+
+    const lookup = useCallback((q) => {
+        setQuery(q);
+    }, []);
+
+    const debouncedLookup = useMemo(() => debounce(lookup, 500), [lookup]);
+
+    const handleSearchChange = (text) => {
+        setSearchBarText(text);
+        debouncedLookup(text);
     };
 
-    const saveData = async () => {
-        try {
-            await AsyncStorage.setItem('profileImage', profileImage.uri);
-            await AsyncStorage.setItem('lastName', lastName);
-            await AsyncStorage.setItem('phoneNumber', phoneNumber);
-            await AsyncStorage.setItem('orderStatuses', selected[0].toString());
-            await AsyncStorage.setItem('passwordChanges', selected[1].toString());
-            await AsyncStorage.setItem('specialOffers', selected[2].toString());
-            await AsyncStorage.setItem('newsletter', selected[3].toString());
-            console.log('Data saved')
-        } catch (e) {
-            console.log('Failed to save data')
-        }
+    const handleFiltersChange = async (index) => {
+        const arrayCopy = [...filterSelections];
+        arrayCopy[index] = !filterSelections[index];
+        setFilterSelections(arrayCopy);
     };
-
-    const logout = async () => {
-        try {
-            await AsyncStorage.removeItem('profileImage');
-            await AsyncStorage.removeItem('name');
-            await AsyncStorage.removeItem('lastName');
-            await AsyncStorage.removeItem('email');
-            await AsyncStorage.removeItem('phoneNumber');
-            await AsyncStorage.removeItem('orderStatuses');
-            await AsyncStorage.removeItem('passwordChanges');
-            await AsyncStorage.removeItem('specialOffers');
-            await AsyncStorage.removeItem('newsletter');
-            updateOnboardingStatus(false);
-            console.log('Data removed')
-        } catch (e) {
-            console.log('Failed to remove data')
-        }
-    };
-
 
     return (
-        <View style={styles.continer}>
-            <SafeAreaView>
+        <View style={styles.container}>
+            <SafeAreaView style={{ flex: 1 }}>
                 <View style={styles.header}>
                     <View style={{ height: 60, width: 60, backgroundColor: 'white' }}></View>
                     <Image
                         source={require('../assets/Logo.png')}
                         style={styles.logo}
                     />
-                    <Image
-                        source={profileImage}
-                        style={styles.profileIcon}
-                    />
+                    <Pressable onPress={() => navigation.navigate('Profile')}>
+                        <Image
+                            source={profileImage}
+                            style={styles.profileIcon}
+                        />
+                    </Pressable>
                 </View>
+
                 <View style={styles.homeArea}>
                     <Text style={styles.mainTitle}>Little Lemon</Text>
-                    <View style={{display: 'flex', flexDirection: 'row'}}>
-                        <View style={{width: '60%'}}>
+                    <View style={{ display: 'flex', flexDirection: 'row' }}>
+                        <View style={{ width: '60%' }}>
                             <Text style={styles.subtityle}>Chicago</Text>
                             <Text style={styles.homeText}>We are a family owned Mediterranean restaurant, focused on traditional recipes served with a modern twist.</Text>
-                            <Icon 
-                                name='magnifying-glass'
-                                type='entypo'
-                                color='black'
-                                size={35}
-                                style={styles.searchIcon}
-                            />
                         </View>
                         <Image
                             source={require('../assets/Home.png')}
                             style={styles.homeImage}
                         />
                     </View>
+                    <Searchbar
+                        placeholderTextColor="black"
+                        value={searchBarText}
+                        onChangeText={handleSearchChange}
+                        style={styles.searchBar}
+                        iconColor="black"
+                        elevation={0}
+                    />
                 </View>
-                <ScrollView>
-
-                </ScrollView>
+                <Text style={styles.orderTitle}>ORDER FOR DELIVERY!</Text>
+                <View style={styles.buttonContainer}>
+                    <Filters
+                        selections={filterSelections}
+                        onChange={handleFiltersChange}
+                        sections={sections}
+                    />
+                </View>
+                <FlatList
+                    data={data}
+                    keyExtractor={(item) => item.name}
+                    renderItem={({ item, index }) => (
+                        <View style={styles.itemContainer} key={index}>
+                            <View style={{ width: '70%' }}>
+                                <Text style={styles.itemTitle}>{item.name}</Text>
+                                <Text style={styles.itemDescription} numberOfLines={2} ellipsizeMode='tail'>{item.description}</Text>
+                                <Text style={styles.itemPrice}>${item.price}</Text>
+                            </View>
+                            <Image
+                                source={images[item.image]}
+                                style={styles.itemImage}
+                            />
+                        </View>
+                    )}
+                    ItemSeparatorComponent={() => (
+                        <View style={styles.listSeparator} />
+                    )}
+                />
             </SafeAreaView>
         </View>
     )
 }
 
 const styles = StyleSheet.create({
-    continer: {
+    container: {
         width: '100%',
         height: '100%',
         backgroundColor: '#ffffff',
-        paddingBottom: '20%',
     },
     header: {
         justifyContent: 'center',
         alignItems: 'center',
-        height: 70,
+        height: 60,
         display: 'flex',
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -184,7 +235,7 @@ const styles = StyleSheet.create({
         borderRadius: 50,
     },
     homeArea: {
-        height: 350,
+        height: 340,
         width: '100%',
         backgroundColor: '#495E57',
         marginTop: 10,
@@ -199,7 +250,7 @@ const styles = StyleSheet.create({
         color: '#ffffff',
         fontSize: 30,
         fontWeight: 'bold',
-        marginBottom: 30,
+        marginBottom: 20,
     },
     homeText: {
         color: '#ffffff',
@@ -224,6 +275,63 @@ const styles = StyleSheet.create({
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    orderTitle: {
+        fontSize: 25,
+        fontWeight: 'bold',
+        margin: 15,
+    },
+    buttonContainer: {
+        width: '93%',
+        display: 'flex',
+        flexDirection: 'row',
+        alignSelf: 'center',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+        borderBottomColor: '#dedede',
+        borderBottomWidth: 2,
+        paddingBottom: 20,
+    },
+    listSeparator: {
+        height: 0.5,
+        width: '93%',
+        backgroundColor: '#545454',
+        alignSelf: 'center',
+    },
+    itemContainer: {
+        width: '95%',
+        alignSelf: 'center',
+        padding: 10,
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    itemTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    itemDescription: {
+        fontSize: 16,
+        color: '#545454',
+        marginVertical: 10,
+    },
+    itemPrice: {
+        fontSize: 20,
+        color: '#545454',
+        fontWeight: '500',
+    },
+    itemImage: {
+        width: 100,
+        height: 100,
+        objectFit: 'cover',
+        marginTop: 10,
+    },
+    searchBar: {
+        marginTop: 10,
+        backgroundColor: '#fefefe',
+        borderRadius: 12,
+        width: '100%',
+        height: 50,
     },
 })
 
