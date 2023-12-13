@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Image, Pressable, SafeAreaView, SectionList, Alert } from 'react-native'
+import { View, Text, StyleSheet, Image, Pressable, SafeAreaView, FlatList, Alert } from 'react-native'
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -14,17 +14,15 @@ import debounce from 'lodash.debounce';
 import Filters from '../components/Filters';
 import { getSectionListData, useUpdateEffect } from '../utils';
 
-const API_URL =
-    'https://raw.githubusercontent.com/Meta-Mobile-Developer-PC/Working-With-Data-API/main/capstone.json';
-const sections = ['Starters', 'Mains', 'Desserts', 'Drinks', 'Sides', 'Specials'];
-
 const HomeScreen = () => {
     const navigation = useNavigation();
     const [profileImage, setProfileImage] = useState(require('../assets/profile-image.png'));
-
     const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(true);
+
     const [searchBarText, setSearchBarText] = useState('');
     const [query, setQuery] = useState('');
+    const sections = ['Starters', 'Mains', 'Desserts', 'Drinks', 'Sides', 'Specials'];
     const [filterSelections, setFilterSelections] = useState(
         sections.map(() => false)
     );
@@ -51,40 +49,54 @@ const HomeScreen = () => {
                 }
             }
             getData();
+            getMenu();
         }, [])
     );
 
-    useEffect(() => {
-        (async () => {
-            try {
-                // 1. Create table if it does not exist
-                await createTable();
-                // 2. Check if data was already stored
-                let menuItems = await getMenuItems();
+    // useEffect(() => {
+    //     (async () => {
+    //       try {
+    //         // 1. Create table if it does not exist
+    //         await createTable();
+    //         // 2. Check if data was already stored
+    //         let menuItems = await getMenuItems();
 
-                if (!menuItems.length) {
-                    // Fetching menu from URL
-                    const response = await fetch(API_URL);
-                    const json = await response.json();
-                    menuItems = json.menu.map((item) => ({
-                        name: item.name,
-                        description: item.description,
-                        price: item.price,
-                        category: item.category.toUpperCase(),
-                        image: item.image,
-                    }));
-                    // Storing into database
-                    saveMenuItems(menuItems);
-                }
+    //         if (!menuItems.length) {
+    //           // Fetching menu from URL
+    //           const response = await fetch(API_URL);
+    //           const json = await response.json();
+    //           menuItems = json.menu.map((item) => ({
+    //             ...item,
+    //             category: item.category.title,
+    //           }));
+    //           // Storing into database
+    //           saveMenuItems(menuItems);
+    //         }
 
-                const sectionListData = getSectionListData(menuItems);
-                setData(sectionListData);
-            } catch (e) {
-                // Handle error
-                Alert.alert(e.message);
+    //         const sectionListData = getSectionListData(menuItems);
+    //         setData(sectionListData);
+    //       } catch (e) {
+    //         // Handle error
+    //         Alert.alert(e.message);
+    //       }
+    //     })();
+    //   }, []);
+
+    const getMenu = async () => {
+        try {
+            const response = await fetch('https://raw.githubusercontent.com/Meta-Mobile-Developer-PC/Working-With-Data-API/main/capstone.json')
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        })();
-    }, []);
+            const json = await response.json()
+            setData(json.menu)
+        } catch (error) {
+            console.error(error)
+        }
+        finally {
+            setLoading(false)
+        }
+    }
 
     useUpdateEffect(() => {
         (async () => {
@@ -93,8 +105,7 @@ const HomeScreen = () => {
                 if (filterSelections.every((item) => item === false)) {
                     return true;
                 }
-                // Return only categories that are active
-                return !filterSelections[i];
+                return filterSelections[i];
             });
             try {
                 const menuItems = await filterByQueryAndCategories(
@@ -124,7 +135,6 @@ const HomeScreen = () => {
         const arrayCopy = [...filterSelections];
         arrayCopy[index] = !filterSelections[index];
         setFilterSelections(arrayCopy);
-        console.log('Filter selections:', arrayCopy);
     };
 
     return (
@@ -143,6 +153,7 @@ const HomeScreen = () => {
                         />
                     </Pressable>
                 </View>
+
                 <View style={styles.homeArea}>
                     <Text style={styles.mainTitle}>Little Lemon</Text>
                     <View style={{ display: 'flex', flexDirection: 'row' }}>
@@ -172,15 +183,15 @@ const HomeScreen = () => {
                         sections={sections}
                     />
                 </View>
-                <SectionList
-                    sections={data}
+                <FlatList
+                    data={data}
                     keyExtractor={(item) => item.name}
-                    renderItem={({ item }) => (
-                        <View style={styles.itemContainer}>
+                    renderItem={({ item, index }) => (
+                        <View style={styles.itemContainer} key={index}>
                             <View style={{ width: '70%' }}>
                                 <Text style={styles.itemTitle}>{item.name}</Text>
                                 <Text style={styles.itemDescription} numberOfLines={2} ellipsizeMode='tail'>{item.description}</Text>
-                                <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
+                                <Text style={styles.itemPrice}>${item.price}</Text>
                             </View>
                             <Image
                                 source={images[item.image]}
@@ -188,9 +199,9 @@ const HomeScreen = () => {
                             />
                         </View>
                     )}
-                    renderSectionHeader={() => null}
-                    SectionSeparatorComponent={() => <View style={styles.sectionSeparator} />}
-                    ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
+                    ItemSeparatorComponent={() => (
+                        <View style={styles.listSeparator} />
+                    )}
                 />
             </SafeAreaView>
         </View>
@@ -277,16 +288,12 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         justifyContent: 'space-between',
         alignItems: 'flex-end',
+        borderBottomColor: '#dedede',
+        borderBottomWidth: 2,
         paddingBottom: 20,
     },
     listSeparator: {
         height: 0.5,
-        width: '93%',
-        backgroundColor: '#545454',
-        alignSelf: 'center',
-    },
-    sectionSeparator: {
-        height: 0.3,
         width: '93%',
         backgroundColor: '#545454',
         alignSelf: 'center',

@@ -1,25 +1,20 @@
 import {useRef, useEffect} from 'react';
 
-export function getSectionListData(data) {
-  const dataByCategory = data.reduce((acc, curr) => {
-    const menuItem = {
-      id: curr.id,
-      title: curr.title,
-      price: curr.price,
-    };
-    if (!Array.isArray(acc[curr.category])) {
-      acc[curr.category] = [menuItem];
-    } else {
-      acc[curr.category].push(menuItem);
-    }
-    return acc;
+export function getSectionListData(menuItems) {
+  // Group items by category
+  const groupedItems = menuItems.reduce((groups, item) => {
+      const group = groups[item.category] || [];
+      group.push(item);
+      groups[item.category] = group;
+      return groups;
   }, {});
-  const sectionListData = Object.entries(dataByCategory).map(([key, item]) => {
-    return {
-      title: key,
-      data: item,
-    };
-  });
+
+  // Convert to section list data
+  const sectionListData = Object.entries(groupedItems).map(([title, data]) => ({
+      title,
+      data,
+  }));
+
   return sectionListData;
 }
 
