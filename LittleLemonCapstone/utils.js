@@ -10,8 +10,8 @@ export function getSectionListData(menuItems) {
   }, {});
 
   // Convert to section list data
-  const sectionListData = Object.entries(groupedItems).map(([title, data]) => ({
-      title,
+  const sectionListData = Object.entries(groupedItems).map(([category, data]) => ({
+      category,
       data,
   }));
 

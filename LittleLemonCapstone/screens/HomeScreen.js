@@ -16,7 +16,7 @@ import { getSectionListData, useUpdateEffect } from '../utils';
 
 const API_URL =
     'https://raw.githubusercontent.com/Meta-Mobile-Developer-PC/Working-With-Data-API/main/capstone.json';
-const sections = ['Starters', 'Mains', 'Desserts', 'Drinks', 'Sides', 'Specials'];
+const sections = ['starters', 'mains', 'desserts', 'drinks', 'sides', 'specials']
 
 const HomeScreen = () => {
     const navigation = useNavigation();
@@ -62,7 +62,7 @@ const HomeScreen = () => {
                 // 2. Check if data was already stored
                 let menuItems = await getMenuItems();
 
-                if (!menuItems.length) {
+                if (menuItems.length === 0) {
                     // Fetching menu from URL
                     const response = await fetch(API_URL);
                     const json = await response.json();
@@ -70,13 +70,13 @@ const HomeScreen = () => {
                         name: item.name,
                         description: item.description,
                         price: item.price,
-                        category: item.category.toUpperCase(),
                         image: item.image,
+                        category: item.category,
                     }));
                     // Storing into database
                     saveMenuItems(menuItems);
+                    // console.log(menuItems);
                 }
-
                 const sectionListData = getSectionListData(menuItems);
                 setData(sectionListData);
             } catch (e) {
@@ -88,19 +88,18 @@ const HomeScreen = () => {
 
     useUpdateEffect(() => {
         (async () => {
-            const activeCategories = sections.filter((s, i) => {
-                // If all filters are deselected, all categories are active
-                if (filterSelections.every((item) => item === false)) {
-                    return true;
-                }
-                // Return only categories that are active
-                return !filterSelections[i];
-            });
             try {
-                const menuItems = await filterByQueryAndCategories(
-                    query,
-                    activeCategories
-                );
+                const activeCategories = filterSelections
+                    .map((selected, index) => {
+                        if (selected) {
+                            console.log(sections[index]);
+                            return sections[index];
+                        }
+                        return null;
+                    })
+                    .filter(Boolean);
+
+                const menuItems = await filterByQueryAndCategories(query, activeCategories);
                 const sectionListData = getSectionListData(menuItems);
                 setData(sectionListData);
             } catch (e) {
@@ -108,6 +107,29 @@ const HomeScreen = () => {
             }
         })();
     }, [filterSelections, query]);
+
+    // useUpdateEffect(() => {
+    //     (async () => {
+    //         const activeCategories = sections.filter((s, i) => {
+    //             // If all filters are deselected, all categories are active
+    //             if (filterSelections.every((item) => item === false)) {
+    //                 return true;
+    //             }
+    //             // Return only categories that are active
+    //             return !filterSelections[i];
+    //         });
+    //         try {
+    //             const menuItems = await filterByQueryAndCategories(
+    //                 query,
+    //                 activeCategories
+    //             );
+    //             const sectionListData = getSectionListData(menuItems);
+    //             setData(sectionListData);
+    //         } catch (e) {
+    //             Alert.alert(e.message);
+    //         }
+    //     })();
+    // }, [filterSelections, query]);
 
     const lookup = useCallback((q) => {
         setQuery(q);
@@ -121,10 +143,10 @@ const HomeScreen = () => {
     };
 
     const handleFiltersChange = async (index) => {
-        const arrayCopy = [...filterSelections];
-        arrayCopy[index] = !filterSelections[index];
-        setFilterSelections(arrayCopy);
-        console.log('Filter selections:', arrayCopy);
+        const updatedSelections = [...filterSelections];
+        updatedSelections[index] = !updatedSelections[index];
+        setFilterSelections(updatedSelections);
+        console.log('Filter selections:', updatedSelections);
     };
 
     return (
@@ -180,7 +202,7 @@ const HomeScreen = () => {
                             <View style={{ width: '70%' }}>
                                 <Text style={styles.itemTitle}>{item.name}</Text>
                                 <Text style={styles.itemDescription} numberOfLines={2} ellipsizeMode='tail'>{item.description}</Text>
-                                <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
+                                <Text style={styles.itemPrice}>${item.price}</Text>
                             </View>
                             <Image
                                 source={images[item.image]}
