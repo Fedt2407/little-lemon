@@ -16,7 +16,7 @@ import { getSectionListData, useUpdateEffect } from '../utils';
 
 const API_URL =
     'https://raw.githubusercontent.com/Meta-Mobile-Developer-PC/Working-With-Data-API/main/capstone.json';
-const sections = ['starters', 'mains', 'desserts', 'drinks', 'sides', 'specials']
+const sections = ['Starters', 'Mains', 'Desserts', 'Drinks', 'Sides', 'Specials']
 
 const HomeScreen = () => {
     const navigation = useNavigation();
@@ -93,7 +93,7 @@ const HomeScreen = () => {
                     .map((selected, index) => {
                         if (selected) {
                             console.log(sections[index]);
-                            return sections[index];
+                            return sections[index].toLowerCase();
                         }
                         return null;
                     })
@@ -107,29 +107,6 @@ const HomeScreen = () => {
             }
         })();
     }, [filterSelections, query]);
-
-    // useUpdateEffect(() => {
-    //     (async () => {
-    //         const activeCategories = sections.filter((s, i) => {
-    //             // If all filters are deselected, all categories are active
-    //             if (filterSelections.every((item) => item === false)) {
-    //                 return true;
-    //             }
-    //             // Return only categories that are active
-    //             return !filterSelections[i];
-    //         });
-    //         try {
-    //             const menuItems = await filterByQueryAndCategories(
-    //                 query,
-    //                 activeCategories
-    //             );
-    //             const sectionListData = getSectionListData(menuItems);
-    //             setData(sectionListData);
-    //         } catch (e) {
-    //             Alert.alert(e.message);
-    //         }
-    //     })();
-    // }, [filterSelections, query]);
 
     const lookup = useCallback((q) => {
         setQuery(q);
